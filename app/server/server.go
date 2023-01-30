@@ -6,6 +6,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/vaderdev/smol/app/model"
+	"github.com/vaderdev/smol/app/utils"
 )
 
 func getAllSmols(ctx *fiber.Ctx) error {
@@ -35,8 +36,27 @@ func getSmol(ctx *fiber.Ctx) error {
 	return ctx.Status(fiber.StatusOK).JSON(smol)
 }
 
-func createGoly(ctx *fiber.Ctx) error {
+func createSmol(ctx *fiber.Ctx) error {
+	ctx.Accepts("application/json")
+	var smol model.Smol
+	err := ctx.BodyParser(&smol)
 
+	if err != nil {
+		return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"msg": "error parsing JSON " + err.Error(),
+		})
+	}
+
+	if smol.Random {
+		smol.Smol = utils.RandomURL(8)
+	}
+	err = model.CreateSmol(smol)
+	if err != nil {
+		return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"msg": "could not create smol in db " + err.Error(),
+		})
+	}
+	return ctx.Status(fiber.StatusOK).JSON(smol)
 }
 
 func SetupAndListen() {
@@ -48,6 +68,7 @@ func SetupAndListen() {
 
 	router.Get("/smol", getAllSmols)
 	router.Get("/smol/:id", getSmol)
+	router.Post("/smol", createSmol)
 
 	router.Listen(":3000")
 }
